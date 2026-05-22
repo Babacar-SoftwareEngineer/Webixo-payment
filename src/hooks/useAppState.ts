@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client";
 
 // ==========================================
 // 1. INTERFACES DU MODÈLE RELATIONNEL DRY
@@ -39,220 +40,407 @@ export interface Devis {
 }
 
 // ==========================================
-// 2. DONNÉES PAR DÉFAUT (INITIALES)
+// 2. HELPERS DE CONVERSION DE DATE
 // ==========================================
 
-const INITIAL_CLIENTS: Client[] = [
-  { id: "c1", nom_entreprise: "Abdoulaye Diallo", nom_contact: "Abdoulaye Diallo", email: "abdoulaye@diallo.com", adresse: "Dakar, Sénégal", avatarBg: "bg-red-50 text-red-500", avatarText: "text-red-600", initials: "Ad" },
-  { id: "c2", nom_entreprise: "Volatiana Rakoto", nom_contact: "Volatiana Rakoto", email: "volatiana@rakoto.com", adresse: "Antananarivo, Madagascar", avatarBg: "bg-blue-50 text-blue-500", avatarText: "text-blue-600", initials: "Vo" },
-  { id: "c3", nom_entreprise: "Coumba Sarr", nom_contact: "Coumba Sarr", email: "coumba@sarr.com", adresse: "Thies, Sénégal", avatarBg: "bg-purple-50 text-purple-500", avatarText: "text-purple-600", initials: "Co" },
-  { id: "c4", nom_entreprise: "CLASS SHOES", nom_contact: "Directeur Class Shoes", email: "contact@classshoes.com", adresse: "Dakar, Plateau", avatarBg: "bg-emerald-50 text-emerald-500", avatarText: "text-emerald-600", initials: "CS" },
-  { id: "c5", nom_entreprise: "NDIEYENNE SERVICES", nom_contact: "Ndieyenne Services", email: "info@ndieyenne.sn", adresse: "Saint-Louis, Sénégal", avatarBg: "bg-amber-50 text-amber-500", avatarText: "text-amber-600", initials: "NS" },
-];
+const formatToFrenchDate = (dateStr: string) => {
+  if (!dateStr) return "";
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    const year = parts[0];
+    const month = parseInt(parts[1]) - 1;
+    const day = parseInt(parts[2]);
+    const months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Jui", "Aoû", "Sep", "Oct", "Nov", "Déc"];
+    return `${day} ${months[month]}, ${year}`;
+  }
+  return dateStr;
+};
 
-const INITIAL_FACTURES: Facture[] = [
-  { id: "f1", client_id: "c1", service: "Abonnement Cloud", montant: 25500, statut_paiement: "Terminé", date_emission: "17 Avr, 2026", heure_emission: "15:45" },
-  { id: "f2", client_id: "c2", service: "Conseil SEO", montant: 1200, statut_paiement: "En attente", date_emission: "16 Avr, 2026", heure_emission: "11:20" },
-  { id: "f3", client_id: "c3", service: "Maintenance Site", montant: 4500, statut_paiement: "En retard", date_emission: "15 Avr, 2026", heure_emission: "09:00", jours_retard: 12 },
-  { id: "f4", client_id: "c4", service: "Création de Site Web", montant: 400000, statut_paiement: "Terminé", date_emission: "10 Avr, 2026", heure_emission: "14:30" },
-  { id: "f5", client_id: "c5", service: "Création de site e-commerce", montant: 350000, statut_paiement: "En attente", date_emission: "08 Avr, 2026", heure_emission: "10:15" },
-  { id: "f6", client_id: "c1", service: "Audit Sécurité Web", montant: 100000, statut_paiement: "En retard", date_emission: "15 Mar, 2026", heure_emission: "10:00", jours_retard: 18 },
-  { id: "f7", client_id: "c4", service: "Développement Application Mobile", montant: 780000, statut_paiement: "En retard", date_emission: "10 Jan, 2026", heure_emission: "14:00", jours_retard: 78 }
-];
-
-const INITIAL_DEVIS: Devis[] = [
-  { id: "d1", client_id: "c1", service: "Refonte d'Application Web", montant: 600000, statut: "Accepté", date_emission: "12 Avr, 2026", date_validite: "12 Mai, 2026" },
-  { id: "d2", client_id: "c2", service: "Optimisation de Performance Cloud", montant: 350000, statut: "Envoyé", date_emission: "18 Avr, 2026", date_validite: "18 Mai, 2026" },
-  { id: "d3", client_id: "c3", service: "Audit de Sécurité Système", montant: 150000, statut: "Brouillon", date_emission: "20 Avr, 2026", date_validite: "20 Mai, 2026" },
-  { id: "d4", client_id: "c4", service: "Création Campagne Google Ads", montant: 250000, statut: "Refusé", date_emission: "05 Avr, 2026", date_validite: "05 Mai, 2026" }
-];
+const parseFrenchDateToISO = (dateStr: string) => {
+  if (!dateStr) return new Date().toISOString().split("T")[0];
+  if (dateStr.includes("-")) {
+    return dateStr;
+  }
+  const cleaned = dateStr.toLowerCase().replace(",", "");
+  const parts = cleaned.split(" ");
+  if (parts.length < 3) return new Date().toISOString().split("T")[0];
+  
+  const day = parts[0].padStart(2, "0");
+  const monthStr = parts[1];
+  const year = parts[2];
+  
+  const months = ["jan", "fév", "mar", "avr", "mai", "jui", "aoû", "sep", "oct", "nov", "déc"];
+  const monthsLong = ["janv", "févr", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"];
+  
+  let monthIdx = 0;
+  for (let i = 0; i < 12; i++) {
+    if (monthStr.startsWith(months[i]) || monthStr.startsWith(monthsLong[i])) {
+      monthIdx = i;
+      break;
+    }
+  }
+  
+  const month = (monthIdx + 1).toString().padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 // ==========================================
 // 3. HOOK D'ÉTAT DE L'APPLICATION
 // ==========================================
 
 export function useAppState() {
+  const supabase = createClient();
+
   const [clients, setClients] = useState<Client[]>([]);
   const [factures, setFactures] = useState<Facture[]>([]);
   const [devis, setDevis] = useState<Devis[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
-  // Charger les données depuis le localStorage au montage
+  // Charger les données depuis Supabase
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedClients = localStorage.getItem("webixo_clients");
-      const storedFactures = localStorage.getItem("webixo_factures");
-      const storedDevis = localStorage.getItem("webixo_devis");
+    async function loadData() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          setIsLoaded(true);
+          return;
+        }
 
-      if (storedClients) {
-        setClients(JSON.parse(storedClients));
-      } else {
-        setClients(INITIAL_CLIENTS);
-        localStorage.setItem("webixo_clients", JSON.stringify(INITIAL_CLIENTS));
+        // Fetch clients
+        const { data: clientsData, error: clientsError } = await supabase
+          .from("Client")
+          .select("*");
+        if (clientsError) throw clientsError;
+
+        // Fetch factures
+        const { data: facturesData, error: facturesError } = await supabase
+          .from("Facture")
+          .select("*");
+        if (facturesError) throw facturesError;
+
+        // Fetch devis
+        const { data: devisData, error: devisError } = await supabase
+          .from("Devis")
+          .select("*");
+        if (devisError) throw devisError;
+
+        // Map database records to camelCase and format dates
+        setClients(
+          (clientsData || []).map((c: any) => ({
+            id: c.id,
+            nom_entreprise: c.nom_entreprise,
+            nom_contact: c.nom_contact || "",
+            email: c.email,
+            adresse: c.adresse || "",
+            avatarBg: c.avatar_bg || "bg-slate-100 text-slate-500",
+            avatarText: c.avatar_text || "text-slate-500",
+            initials: c.initials,
+          }))
+        );
+
+        setFactures(
+          (facturesData || []).map((f: any) => ({
+            id: f.id,
+            client_id: f.client_id,
+            service: f.service,
+            montant: Number(f.montant),
+            statut_paiement: f.statut_paiement as any,
+            date_emission: formatToFrenchDate(f.date_emission),
+            heure_emission: f.heure_emission.substring(0, 5),
+            jours_retard: f.jours_retard || undefined,
+          }))
+        );
+
+        setDevis(
+          (devisData || []).map((d: any) => ({
+            id: d.id,
+            client_id: d.client_id,
+            service: d.service,
+            montant: Number(d.montant),
+            statut: d.statut as any,
+            date_emission: formatToFrenchDate(d.date_emission),
+            date_validite: formatToFrenchDate(d.date_validite),
+          }))
+        );
+      } catch (error) {
+        console.error("Error loading Supabase data:", error);
+      } finally {
+        setIsLoaded(true);
       }
-
-      if (storedFactures) {
-        setFactures(JSON.parse(storedFactures));
-      } else {
-        setFactures(INITIAL_FACTURES);
-        localStorage.setItem("webixo_factures", JSON.stringify(INITIAL_FACTURES));
-      }
-
-      if (storedDevis) {
-        setDevis(JSON.parse(storedDevis));
-      } else {
-        setDevis(INITIAL_DEVIS);
-        localStorage.setItem("webixo_devis", JSON.stringify(INITIAL_DEVIS));
-      }
-
-      setIsLoaded(true);
     }
+
+    loadData();
   }, []);
 
-  // Fonctions d'écriture persistantes
-  const saveClients = (newClients: Client[]) => {
-    setClients(newClients);
-    localStorage.setItem("webixo_clients", JSON.stringify(newClients));
-  };
-
-  const saveFactures = (newFactures: Facture[]) => {
-    setFactures(newFactures);
-    localStorage.setItem("webixo_factures", JSON.stringify(newFactures));
-  };
-
-  const saveDevis = (newDevis: Devis[]) => {
-    setDevis(newDevis);
-    localStorage.setItem("webixo_devis", JSON.stringify(newDevis));
-  };
-
   // Actions Clients
-  const addClient = (client: Omit<Client, "id" | "avatarBg" | "avatarText" | "initials">) => {
-    const randomColors = [
-      { bg: "bg-red-50 text-red-500", text: "text-red-600" },
-      { bg: "bg-blue-50 text-blue-500", text: "text-blue-600" },
-      { bg: "bg-purple-50 text-purple-500", text: "text-purple-600" },
-      { bg: "bg-emerald-50 text-emerald-500", text: "text-emerald-600" },
-      { bg: "bg-amber-50 text-amber-500", text: "text-amber-600" },
-      { bg: "bg-indigo-50 text-indigo-500", text: "text-indigo-600" },
-    ];
-    const color = randomColors[Math.floor(Math.random() * randomColors.length)];
-    const initials = client.nom_entreprise
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .substring(0, 2)
-      .toUpperCase();
+  const addClient = async (client: Omit<Client, "id" | "avatarBg" | "avatarText" | "initials">) => {
+    try {
+      const randomColors = [
+        { bg: "bg-red-50 text-red-500", text: "text-red-600" },
+        { bg: "bg-blue-50 text-blue-500", text: "text-blue-600" },
+        { bg: "bg-purple-50 text-purple-500", text: "text-purple-600" },
+        { bg: "bg-emerald-50 text-emerald-500", text: "text-emerald-600" },
+        { bg: "bg-amber-50 text-amber-500", text: "text-amber-600" },
+        { bg: "bg-indigo-50 text-indigo-500", text: "text-indigo-600" },
+      ];
+      const color = randomColors[Math.floor(Math.random() * randomColors.length)];
+      const initials = client.nom_entreprise
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .substring(0, 2)
+        .toUpperCase() || "??";
 
-    const newClient: Client = {
-      ...client,
-      id: `c_${Date.now()}`,
-      avatarBg: color.bg,
-      avatarText: color.text,
-      initials: initials || "??"
-    };
+      const { data, error } = await supabase
+        .from("Client")
+        .insert({
+          nom_entreprise: client.nom_entreprise,
+          nom_contact: client.nom_contact,
+          email: client.email,
+          adresse: client.adresse,
+          avatar_bg: color.bg,
+          avatar_text: color.text,
+          initials: initials,
+        })
+        .select()
+        .single();
 
-    saveClients([...clients, newClient]);
-    return newClient;
+      if (error) throw error;
+
+      const newClient: Client = {
+        id: data.id,
+        nom_entreprise: data.nom_entreprise,
+        nom_contact: data.nom_contact || "",
+        email: data.email,
+        adresse: data.adresse || "",
+        avatarBg: data.avatar_bg || "bg-slate-100 text-slate-500",
+        avatarText: data.avatar_text || "text-slate-500",
+        initials: data.initials,
+      };
+
+      setClients((prev) => [...prev, newClient]);
+      return newClient;
+    } catch (error) {
+      console.error("Error adding client:", error);
+      throw error;
+    }
   };
 
-  const updateClient = (id: string, updatedFields: Partial<Omit<Client, "id" | "avatarBg" | "avatarText" | "initials">>) => {
-    const updated = clients.map((c) => {
-      if (c.id === id) {
-        let initials = c.initials;
-        if (updatedFields.nom_entreprise) {
-          initials = updatedFields.nom_entreprise
-            .split(" ")
-            .map((n) => n[0])
-            .join("")
-            .substring(0, 2)
-            .toUpperCase() || "??";
-        }
-        return {
-          ...c,
-          ...updatedFields,
-          initials
-        };
+  const updateClient = async (
+    id: string,
+    updatedFields: Partial<Omit<Client, "id" | "avatarBg" | "avatarText" | "initials">>
+  ) => {
+    try {
+      let initials: string | undefined;
+      if (updatedFields.nom_entreprise) {
+        initials = updatedFields.nom_entreprise
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .substring(0, 2)
+          .toUpperCase() || "??";
       }
-      return c;
-    });
-    saveClients(updated);
+
+      const updatePayload: any = {
+        nom_entreprise: updatedFields.nom_entreprise,
+        nom_contact: updatedFields.nom_contact,
+        email: updatedFields.email,
+        adresse: updatedFields.adresse,
+      };
+      if (initials) {
+        updatePayload.initials = initials;
+      }
+
+      const { data, error } = await supabase
+        .from("Client")
+        .update(updatePayload)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setClients((prev) =>
+        prev.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                nom_entreprise: data.nom_entreprise,
+                nom_contact: data.nom_contact || "",
+                email: data.email,
+                adresse: data.adresse || "",
+                initials: data.initials,
+              }
+            : c
+        )
+      );
+    } catch (error) {
+      console.error("Error updating client:", error);
+      throw error;
+    }
   };
 
   // Actions Factures
-  const addFacture = (facture: Omit<Facture, "id" | "date_emission" | "heure_emission">) => {
-    const now = new Date();
-    const formatterDate = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-    const formattedDate = formatterDate.format(now);
-    const formattedTime = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const addFacture = async (facture: Omit<Facture, "id" | "date_emission" | "heure_emission">) => {
+    try {
+      const now = new Date();
+      const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+      const timeStr = now.toTimeString().split(" ")[0]; // HH:MM:SS
 
-    const newFacture: Facture = {
-      ...facture,
-      id: `f_${Date.now()}`,
-      date_emission: formattedDate,
-      heure_emission: formattedTime
-    };
+      const { data, error } = await supabase
+        .from("Facture")
+        .insert({
+          client_id: facture.client_id,
+          service: facture.service,
+          montant: facture.montant,
+          statut_paiement: facture.statut_paiement,
+          date_emission: dateStr,
+          heure_emission: timeStr,
+        })
+        .select()
+        .single();
 
-    saveFactures([...factures, newFacture]);
-    return newFacture;
+      if (error) throw error;
+
+      const newFacture: Facture = {
+        id: data.id,
+        client_id: data.client_id,
+        service: data.service,
+        montant: Number(data.montant),
+        statut_paiement: data.statut_paiement as any,
+        date_emission: formatToFrenchDate(data.date_emission),
+        heure_emission: data.heure_emission.substring(0, 5),
+        jours_retard: data.jours_retard || undefined,
+      };
+
+      setFactures((prev) => [...prev, newFacture]);
+      return newFacture;
+    } catch (error) {
+      console.error("Error adding facture:", error);
+      throw error;
+    }
   };
 
-  const updateFactureStatut = (id: string, statut: "Terminé" | "En attente" | "En retard") => {
-    const updated = factures.map((f) => {
-      if (f.id === id) {
-        return {
-          ...f,
+  const updateFactureStatut = async (id: string, statut: "Terminé" | "En attente" | "En retard") => {
+    try {
+      const { data, error } = await supabase
+        .from("Facture")
+        .update({
           statut_paiement: statut,
-          jours_retard: statut === "En retard" ? 1 : undefined
-        };
-      }
-      return f;
-    });
-    saveFactures(updated);
+          jours_retard: statut === "En retard" ? 1 : null,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setFactures((prev) =>
+        prev.map((f) =>
+          f.id === id
+            ? {
+                ...f,
+                statut_paiement: data.statut_paiement as any,
+                jours_retard: data.jours_retard || undefined,
+              }
+            : f
+        )
+      );
+    } catch (error) {
+      console.error("Error updating facture status:", error);
+      throw error;
+    }
   };
 
   // Actions Devis
-  const addDevis = (dev: Omit<Devis, "id" | "date_emission">) => {
-    const now = new Date();
-    const formatterDate = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-    const formattedDate = formatterDate.format(now);
+  const addDevis = async (dev: Omit<Devis, "id" | "date_emission">) => {
+    try {
+      const now = new Date();
+      const dateStr = now.toISOString().split("T")[0]; // YYYY-MM-DD
+      const validityIso = parseFrenchDateToISO(dev.date_validite);
 
-    const newDevis: Devis = {
-      ...dev,
-      id: `d_${Date.now()}`,
-      date_emission: formattedDate
-    };
+      const { data, error } = await supabase
+        .from("Devis")
+        .insert({
+          client_id: dev.client_id,
+          service: dev.service,
+          montant: dev.montant,
+          statut: dev.statut,
+          date_emission: dateStr,
+          date_validite: validityIso,
+        })
+        .select()
+        .single();
 
-    saveDevis([...devis, newDevis]);
-    return newDevis;
+      if (error) throw error;
+
+      const newDevis: Devis = {
+        id: data.id,
+        client_id: data.client_id,
+        service: data.service,
+        montant: Number(data.montant),
+        statut: data.statut as any,
+        date_emission: formatToFrenchDate(data.date_emission),
+        date_validite: formatToFrenchDate(data.date_validite),
+      };
+
+      setDevis((prev) => [...prev, newDevis]);
+      return newDevis;
+    } catch (error) {
+      console.error("Error adding devis:", error);
+      throw error;
+    }
   };
 
-  const updateDevisStatut = (id: string, statut: "Brouillon" | "Envoyé" | "Accepté" | "Refusé") => {
-    const updated = devis.map((d) => {
-      if (d.id === id) {
-        return { ...d, statut };
-      }
-      return d;
-    });
-    saveDevis(updated);
+  const updateDevisStatut = async (id: string, statut: "Brouillon" | "Envoyé" | "Accepté" | "Refusé") => {
+    try {
+      const { data, error } = await supabase
+        .from("Devis")
+        .update({ statut })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setDevis((prev) =>
+        prev.map((d) =>
+          d.id === id
+            ? {
+                ...d,
+                statut: data.statut as any,
+              }
+            : d
+        )
+      );
+    } catch (error) {
+      console.error("Error updating devis status:", error);
+      throw error;
+    }
   };
 
   // Convertir un Devis en Facture
-  const convertDevisToFacture = (devisId: string) => {
-    const dev = devis.find((d) => d.id === devisId);
-    if (!dev) return null;
+  const convertDevisToFacture = async (devisId: string) => {
+    try {
+      const dev = devis.find((d) => d.id === devisId);
+      if (!dev) return null;
 
-    // Ajouter la facture
-    const fact = addFacture({
-      client_id: dev.client_id,
-      service: dev.service,
-      montant: dev.montant,
-      statut_paiement: "En attente"
-    });
+      // Ajouter la facture correspondante
+      const fact = await addFacture({
+        client_id: dev.client_id,
+        service: dev.service,
+        montant: dev.montant,
+        statut_paiement: "En attente",
+      });
 
-    // Mettre à jour le statut du devis
-    updateDevisStatut(devisId, "Accepté");
+      // Mettre à jour le statut du devis en "Accepté"
+      await updateDevisStatut(devisId, "Accepté");
 
-    return fact;
+      return fact;
+    } catch (error) {
+      console.error("Error converting devis to facture:", error);
+      throw error;
+    }
   };
 
   return {
@@ -266,6 +454,6 @@ export function useAppState() {
     updateFactureStatut,
     addDevis,
     updateDevisStatut,
-    convertDevisToFacture
+    convertDevisToFacture,
   };
 }

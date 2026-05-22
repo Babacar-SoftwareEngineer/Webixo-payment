@@ -378,10 +378,16 @@ export default function DevisPage() {
     showToast("success", `Le statut du devis a été changé en '${statut}'.`);
   };
 
-  const handleConvertir = (id: string) => {
-    const fact = convertDevisToFacture(id);
-    if (fact) {
-      showToast("success", "Excellent ! Devis accepté converti en Facture active avec succès !");
+  const handleConvertir = async (id: string) => {
+    try {
+      const fact = await convertDevisToFacture(id);
+      if (fact) {
+        showToast("success", "Excellent ! Devis accepté converti en Facture active avec succès !");
+      } else {
+        showToast("info", "Une erreur est survenue lors de la conversion du devis.");
+      }
+    } catch (error) {
+      showToast("info", "Impossible de convertir le devis en facture.");
     }
   };
 
