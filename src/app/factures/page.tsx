@@ -6,22 +6,18 @@ import {
   Search, 
   ChevronDown, 
   Check, 
-  X, 
-  DollarSign, 
-  Send, 
+  Send,
   CheckCircle2, 
-  AlertTriangle,
   RefreshCw,
   ArrowLeft,
   Download,
   Mail,
-  CreditCard,
   Trash2,
   Info
 } from "lucide-react";
-import { useAppState, Facture } from "@/hooks/useAppState";
+import { useAppState } from "@/hooks/useAppState";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { 
@@ -40,6 +36,176 @@ interface LineItem {
   units: number;
   price: number;
 }
+
+const formatDateWithDots = (dateStr: string) => {
+  if (!dateStr) return "—";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}.${month}.${year}`;
+  } catch {
+    return dateStr;
+  }
+};
+
+const formatNumberWithSpaces = (val: number): string => {
+  return Math.round(val).toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+};
+
+const oklchToRgb = (l: string | number, c: string | number, h: string | number, alpha: string | number = 1): string => {
+  const L = typeof l === "string" && l.endsWith("%") ? parseFloat(l) / 100 : parseFloat(l as string);
+  const C = parseFloat(c as string);
+  const H = parseFloat(h as string);
+  const A = typeof alpha === "string" && alpha.endsWith("%") ? parseFloat(alpha) / 100 : parseFloat(alpha as string);
+
+  if (isNaN(L) || isNaN(C) || isNaN(H)) return "rgb(100, 116, 139)";
+
+  // Oklch to Oklab coordinates
+  const hRad = (H * Math.PI) / 180;
+  const oklab_a = C * Math.cos(hRad);
+  const oklab_b = C * Math.sin(hRad);
+
+  // Oklab to LMS
+  const l_lms_root = L + 0.3963377774 * oklab_a + 0.2158037573 * oklab_b;
+  const m_lms_root = L - 0.1055613458 * oklab_a - 0.0638541728 * oklab_b;
+  const s_lms_root = L - 0.0894841775 * oklab_a - 1.2914855480 * oklab_b;
+
+  const l_lms = l_lms_root * l_lms_root * l_lms_root;
+  const m_lms = m_lms_root * m_lms_root * m_lms_root;
+  const s_lms = s_lms_root * s_lms_root * s_lms_root;
+
+  // LMS to linear sRGB
+  const r_lin = +4.0767416621 * l_lms - 3.3077115913 * m_lms + 0.2309699292 * s_lms;
+  const g_lin = -1.2684380046 * l_lms + 2.6097574011 * m_lms - 0.3413193965 * s_lms;
+  const b_lin = -0.0041960863 * l_lms - 0.7034186147 * m_lms + 1.7076147010 * s_lms;
+
+  // Linear to sRGB gamma
+  const f = (x: number) => x > 0.0031308 ? 1.055 * Math.pow(x, 1 / 2.4) - 0.055 : 12.92 * x;
+
+  const r = Math.max(0, Math.min(255, Math.round(f(r_lin) * 255)));
+  const g = Math.max(0, Math.min(255, Math.round(f(g_lin) * 255)));
+  const b = Math.max(0, Math.min(255, Math.round(f(b_lin) * 255)));
+
+  return A === 1 || isNaN(A) ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${A})`;
+};
+
+const oklabToRgb = (l: string | number, aCoord: string | number, bCoord: string | number, alpha: string | number = 1): string => {
+  const L = typeof l === "string" && l.endsWith("%") ? parseFloat(l) / 100 : parseFloat(l as string);
+  const oklab_a = parseFloat(aCoord as string);
+  const oklab_b = parseFloat(bCoord as string);
+  const A = typeof alpha === "string" && alpha.endsWith("%") ? parseFloat(alpha) / 100 : parseFloat(alpha as string);
+
+  if (isNaN(L) || isNaN(oklab_a) || isNaN(oklab_b)) return "rgb(243, 244, 246)";
+
+  // Oklab to LMS
+  const l_lms_root = L + 0.3963377774 * oklab_a + 0.2158037573 * oklab_b;
+  const m_lms_root = L - 0.1055613458 * oklab_a - 0.0638541728 * oklab_b;
+  const s_lms_root = L - 0.0894841775 * oklab_a - 1.2914855480 * oklab_b;
+
+  const l_lms = l_lms_root * l_lms_root * l_lms_root;
+  const m_lms = m_lms_root * m_lms_root * m_lms_root;
+  const s_lms = s_lms_root * s_lms_root * s_lms_root;
+
+  // LMS to linear sRGB
+  const r_lin = +4.0767416621 * l_lms - 3.3077115913 * m_lms + 0.2309699292 * s_lms;
+  const g_lin = -1.2684380046 * l_lms + 2.6097574011 * m_lms - 0.3413193965 * s_lms;
+  const b_lin = -0.0041960863 * l_lms - 0.7034186147 * m_lms + 1.7076147010 * s_lms;
+
+  // Linear to sRGB gamma
+  const f = (x: number) => x > 0.0031308 ? 1.055 * Math.pow(x, 1 / 2.4) - 0.055 : 12.92 * x;
+
+  const r = Math.max(0, Math.min(255, Math.round(f(r_lin) * 255)));
+  const g = Math.max(0, Math.min(255, Math.round(f(g_lin) * 255)));
+  const b = Math.max(0, Math.min(255, Math.round(f(b_lin) * 255)));
+
+  return A === 1 || isNaN(A) ? `rgb(${r}, ${g}, ${b})` : `rgba(${r}, ${g}, ${b}, ${A})`;
+};
+
+const replaceOklchInCss = (cssText: string): string => {
+  let result = "";
+  let i = 0;
+  while (i < cssText.length) {
+    if (
+      cssText.startsWith("oklch(", i) || 
+      cssText.startsWith("oklab(", i) || 
+      cssText.startsWith("lab(", i) || 
+      cssText.startsWith("lch(", i)
+    ) {
+      const isOklch = cssText.startsWith("oklch(", i);
+      const isOklab = cssText.startsWith("oklab(", i);
+      const isLab = cssText.startsWith("lab(", i);
+      const isLch = cssText.startsWith("lch(", i);
+      
+      if (isOklch || isOklab) i += 6;
+      else i += 4;
+
+      let parenCount = 1;
+      const contentStart = i;
+      while (i < cssText.length && parenCount > 0) {
+        if (cssText[i] === "(") parenCount++;
+        else if (cssText[i] === ")") parenCount--;
+        i++;
+      }
+      const contentEnd = i - 1;
+      const functionContent = cssText.substring(contentStart, contentEnd);
+
+      const parts = functionContent.trim().split(/[\s/]+/);
+      const l = parts[0];
+
+      if (isOklch) {
+        try {
+          if (parts.length >= 3) {
+            const c = parts[1];
+            const h = parts[2];
+            const a = parts[3] !== undefined ? parts[3] : "1";
+            const rgbVal = oklchToRgb(l, c, h, a);
+            result += rgbVal;
+            continue;
+          }
+        } catch {
+          // fallback
+        }
+      } else if (isOklab) {
+        try {
+          if (parts.length >= 3) {
+            const aCoord = parts[1];
+            const bCoord = parts[2];
+            const a = parts[3] !== undefined ? parts[3] : "1";
+            const rgbVal = oklabToRgb(l, aCoord, bCoord, a);
+            result += rgbVal;
+            continue;
+          }
+        } catch {
+          // fallback
+        }
+      }
+
+      // Lightness-based dynamic fallback
+      try {
+        let L = 0.5;
+        if (l.endsWith("%")) {
+          L = parseFloat(l) / 100;
+        } else {
+          const val = parseFloat(l);
+          L = (isOklch || isOklab) ? val : val / 100;
+        }
+        if (isNaN(L)) L = 0.5;
+        // Dark colors mapped to slate/dark gray, light colors to light gray
+        const rgbVal = L < 0.55 ? "rgb(31, 41, 55)" : "rgb(243, 244, 246)";
+        result += rgbVal;
+      } catch {
+        result += "rgb(243, 244, 246)";
+      }
+    } else {
+      result += cssText[i];
+      i++;
+    }
+  }
+  return result;
+};
 
 export default function FacturesPage() {
   const { clients, factures, addFacture, updateFactureStatut, isLoaded } = useAppState();
@@ -72,20 +238,64 @@ export default function FacturesPage() {
   const [companyPhone, setCompanyPhone] = useState("+221 33 824 15 15");
   const [companyTaxId, setCompanyTaxId] = useState("ABN 987-654-321");
   const [companyWebsite, setCompanyWebsite] = useState("clorio.sn");
+  const [logoAgence, setLogoAgence] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("webixo_agency_settings");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setTimeout(() => {
+            if (parsed.nomAgence) setCompanyName(parsed.nomAgence);
+            if (parsed.adresseAgence) setCompanyAddress(parsed.adresseAgence);
+            if (parsed.emailAgence) setCompanyEmail(parsed.emailAgence);
+            if (parsed.telAgence) setCompanyPhone(parsed.telAgence);
+            if (parsed.websiteAgence) setCompanyWebsite(parsed.websiteAgence);
+            if (parsed.logoAgence) setLogoAgence(parsed.logoAgence);
+          }, 0);
+        } catch (e) {
+          console.error("Failed to load agency settings in invoice page:", e);
+        }
+      }
+    }
+  }, []);
 
   // 2. Détails Client
   const [selectedClientId, setSelectedClientId] = useState("");
+  const [clientName, setClientName] = useState("");
+  const [clientContact, setClientContact] = useState("");
+  const [clientEmail, setClientEmail] = useState("");
+  const [clientAddress, setClientAddress] = useState("");
   
   // Client résolu automatiquement depuis la base relationnelle
-  const resolvedClient = useMemo(() => {
-    return clients.find((c) => c.id === selectedClientId) || null;
-  }, [clients, selectedClientId]);
+  // Synchronize client local state when selected client changes
+  useEffect(() => {
+    const client = clients.find((c) => c.id === selectedClientId);
+    setTimeout(() => {
+      if (client) {
+        setClientName(client.nom_entreprise);
+        setClientContact(client.nom_contact);
+        setClientEmail(client.email);
+        setClientAddress(client.adresse);
+      } else {
+        setClientName("");
+        setClientContact("");
+        setClientEmail("");
+        setClientAddress("");
+      }
+    }, 0);
+  }, [selectedClientId, clients]);
 
   // 3. Détails Facture (Projet et Dates)
   const [projectName, setProjectName] = useState("Développement Plateforme Web");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
-  const [issuedDate, setIssuedDate] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [invoiceNumber] = useState(() => `FC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [issuedDate, setIssuedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [dueDate, setDueDate] = useState(() => {
+    const future = new Date();
+    future.setDate(future.getDate() + 30);
+    return future.toISOString().split("T")[0];
+  });
   
   // Articles / Services multiples
   const [lineItems, setLineItems] = useState<LineItem[]>([
@@ -93,36 +303,7 @@ export default function FacturesPage() {
     { id: "2", description: "Développement Next.js / Tailwind CSS", units: 1, price: 350000 },
   ]);
 
-  // Générer un numéro de facture par défaut
-  useEffect(() => {
-    if (!invoiceNumber) {
-      setInvoiceNumber(`FC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
-    }
-    if (!issuedDate) {
-      const today = new Date().toISOString().split("T")[0];
-      setIssuedDate(today);
-    }
-    if (!dueDate) {
-      const future = new Date();
-      future.setDate(future.getDate() + 30);
-      setDueDate(future.toISOString().split("T")[0]);
-    }
-  }, [invoiceNumber, issuedDate, dueDate]);
-
-  // 4. Détails de Paiement
-  const [paymentMethod, setPaymentMethod] = useState("Virement Bancaire (EFT)");
-  const [bankAccountName, setBankAccountName] = useState("CLORIO STUDIO S.A.S.");
-  const [bankCode, setBankCode] = useState("SN012 - BOA DAKAR");
-  const [bankAccountNumber, setBankAccountNumber] = useState("991188343445123");
-
-  // 5. Notes et Conditions
-  const [invoiceNotes, setInvoiceNotes] = useState(
-    "Pénalités de retard : 10% par an calculées à compter du jour suivant la date d'échéance."
-  );
-
-  // 6. Signature
-  const [signatureText, setSignatureText] = useState("Washim Chowdhury");
-  const [signatureNote, setSignatureNote] = useState("Co-fondateur & CTO Clorio");
+  // Note: invoiceNumber, issuedDate, and dueDate are now initialized lazily in useState.
 
   // Erreurs de formulaire
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -134,10 +315,10 @@ export default function FacturesPage() {
     return lineItems.reduce((sum, item) => sum + item.price * item.units, 0);
   }, [lineItems]);
 
-  const tvaRate = 0.18; // TVA standard de 18% au Sénégal
+  const tvaRate = 0.0; // TVA désactivée sur la facture
   const tvaAmount = useMemo(() => {
     return Math.round(subtotal * tvaRate);
-  }, [subtotal]);
+  }, [subtotal, tvaRate]);
 
   const totalAmount = useMemo(() => {
     return subtotal + tvaAmount;
@@ -161,14 +342,10 @@ export default function FacturesPage() {
   };
 
   const removeLineItem = (id: string) => {
-    if (lineItems.length > 1) {
-      setLineItems(lineItems.filter((item) => item.id !== id));
-    } else {
-      showToast("info", "La facture doit comporter au moins un service.");
-    }
+    setLineItems(lineItems.filter((item) => item.id !== id));
   };
 
-  const updateLineItem = (id: string, field: keyof LineItem, value: any) => {
+  const updateLineItem = (id: string, field: keyof LineItem, value: string | number) => {
     setLineItems(
       lineItems.map((item) => {
         if (item.id === id) {
@@ -223,8 +400,8 @@ export default function FacturesPage() {
   const handleDownloadPDF = async () => {
     showToast("info", "Génération du PDF...");
     try {
-      // @ts-ignore
-      const html2pdf = (await import("html2pdf.js")).default;
+      const html2pdfModule = await import("html2pdf.js");
+      const html2pdf = html2pdfModule.default || html2pdfModule;
       const element = document.querySelector(".printable-sheet");
       if (!element) {
         showToast("info", "Erreur : Document introuvable.");
@@ -241,83 +418,86 @@ export default function FacturesPage() {
           letterRendering: true,
           logging: false,
           onclone: (clonedDoc: Document) => {
-            // Liste exhaustive des propriétés à copier pour un rendu exact
-            const propertiesToCopy = [
-              "display", "position", "top", "right", "bottom", "left", "float", "clear",
-              "width", "height", "minWidth", "minHeight", "maxWidth", "maxHeight",
-              "margin", "marginTop", "marginRight", "marginBottom", "marginLeft",
-              "padding", "paddingTop", "paddingRight", "paddingBottom", "paddingLeft",
-              "border", "borderWidth", "borderStyle", "borderColor",
-              "borderTop", "borderTopWidth", "borderTopStyle", "borderTopColor",
-              "borderRight", "borderRightWidth", "borderRightStyle", "borderRightColor",
-              "borderBottom", "borderBottomWidth", "borderBottomStyle", "borderBottomColor",
-              "borderLeft", "borderLeftWidth", "borderLeftStyle", "borderLeftColor",
-              "borderRadius", "borderTopLeftRadius", "borderTopRightRadius", "borderBottomLeftRadius", "borderBottomRightRadius",
-              "borderCollapse", "borderSpacing",
-              "boxSizing",
-              "flex", "flexDirection", "flexWrap", "justifyContent", "alignItems", "alignContent", "alignSelf", "order", "flexGrow", "flexShrink", "flexBasis",
-              "grid", "gridTemplateColumns", "gridTemplateRows", "gridColumn", "gridRow", "gap", "columnGap", "rowGap",
-              "font", "fontFamily", "fontSize", "fontWeight", "fontStyle", "lineHeight", "letterSpacing", "textAlign", "textTransform", "textDecoration",
-              "color", "background", "backgroundColor", "backgroundImage", "backgroundSize", "backgroundPosition", "backgroundRepeat",
-              "opacity", "visibility", "zIndex", "overflow",
-              "boxShadow", "textShadow", "verticalAlign", "whiteSpace", "wordBreak", "wordWrap",
-              "fill", "stroke", "strokeWidth", "strokeLinecap", "strokeLinejoin", "transform", "tableLayout"
-            ];
-
-            const copyComputedStyles = (src: Element, dest: Element) => {
-              const srcStyles = window.getComputedStyle(src);
-              const destHtml = dest as HTMLElement;
-              for (const prop of propertiesToCopy) {
-                const val = srcStyles.getPropertyValue(prop);
-                if (val) {
-                  destHtml.style.setProperty(prop, val);
-                }
-              }
-            };
-
-            const originalElement = document.querySelector(".printable-sheet");
-            if (originalElement) {
-              const clonedElement = clonedDoc.querySelector(".printable-sheet");
-              if (clonedElement) {
-                const copyRecursive = (src: Element, dest: Element) => {
-                  copyComputedStyles(src, dest);
-                  const srcChildren = Array.from(src.children);
-                  const destChildren = Array.from(dest.children);
-                  for (let i = 0; i < srcChildren.length; i++) {
-                    if (srcChildren[i] && destChildren[i]) {
-                      copyRecursive(srcChildren[i], destChildren[i]);
+            // Mock getComputedStyle on the cloned window to prevent html2canvas color parse errors
+            const win = clonedDoc.defaultView;
+            if (win) {
+              const originalGetComputedStyle = win.getComputedStyle;
+              win.getComputedStyle = function(element, pseudoElement) {
+                const style = originalGetComputedStyle.call(win, element, pseudoElement);
+                return new Proxy(style, {
+                  get(target, prop) {
+                    if (prop === "getPropertyValue") {
+                      return function(propertyName: string) {
+                        const val = target.getPropertyValue(propertyName);
+                        if (
+                          val && 
+                          (val.includes("oklch") || 
+                           val.includes("oklab") || 
+                           val.includes("lab") || 
+                           val.includes("lch"))
+                        ) {
+                          return replaceOklchInCss(val);
+                        }
+                        return val;
+                      };
                     }
+                    const value = Reflect.get(target, prop);
+                    if (typeof value === "string") {
+                      if (
+                        value.includes("oklch") || 
+                        value.includes("oklab") || 
+                        value.includes("lab") || 
+                        value.includes("lch")
+                      ) {
+                        return replaceOklchInCss(value);
+                      }
+                    }
+                    if (typeof value === "function") {
+                      return value.bind(target);
+                    }
+                    return value;
                   }
-                };
-                copyRecursive(originalElement, clonedElement);
-              }
+                });
+              };
             }
 
-            // Supprimer toutes les feuilles de style de Tailwind ou de l'application qui pourraient planter à cause d'oklch
-            // Tout en conservant celles qui définissent les @font-face pour Outfit et Georgia
-            const styleTags = clonedDoc.querySelectorAll("style, link[rel='stylesheet']");
-            styleTags.forEach((el) => {
-              try {
-                const htmlEl = el as HTMLElement;
-                const textContent = htmlEl.textContent || "";
-                if (
-                  textContent.includes("@font-face") || 
-                  textContent.includes("font-display") || 
-                  textContent.includes("--font-outfit") || 
-                  textContent.includes("--font-inter")
-                ) {
-                  // Nettoyer les oklch potentiels dans ces balises de police pour être 100% sûr d'éviter un crash
-                  htmlEl.textContent = textContent
-                    .replace(/oklch\([^)]+\)/g, "rgb(0,0,0)")
-                    .replace(/lab\([^)]+\)/g, "rgb(0,0,0)")
-                    .replace(/oklab\([^)]+\)/g, "rgb(0,0,0)");
-                } else {
-                  el.remove();
+            // Retrieve all styles synchronously from document.styleSheets
+            const cssRulesList: string[] = [];
+            try {
+              for (let i = 0; i < document.styleSheets.length; i++) {
+                const sheet = document.styleSheets[i];
+                try {
+                  const rules = sheet.cssRules || sheet.rules;
+                  if (rules) {
+                    for (let j = 0; j < rules.length; j++) {
+                      try {
+                        const rule = rules[j];
+                        if (rule && typeof rule.cssText === "string") {
+                          cssRulesList.push(rule.cssText);
+                        }
+                      } catch {
+                        // ignore bad rules
+                      }
+                    }
+                  }
+                } catch {
+                  // Ignore cross-origin issues for CDN scripts (dev server stylesheets are fine)
                 }
-              } catch (e) {
-                el.remove();
               }
-            });
+            } catch (e) {
+              console.error("Error reading styleSheets:", e);
+            }
+
+            const cssText = cssRulesList.join("\n");
+            const convertedCss = replaceOklchInCss(cssText);
+
+            // Clean up old styles
+            clonedDoc.querySelectorAll("style, link[rel='stylesheet']").forEach((el) => el.remove());
+
+            // Inject the new single preprocessed style tag
+            const styleTag = clonedDoc.createElement("style");
+            styleTag.textContent = convertedCss;
+            clonedDoc.head.appendChild(styleTag);
           }
         },
         jsPDF: { unit: "in", format: "letter", orientation: "portrait" }
@@ -332,16 +512,16 @@ export default function FacturesPage() {
   };
 
   const handleSendEmail = () => {
-    if (!resolvedClient) {
+    if (!clientName || !clientEmail) {
       showToast("info", "Veuillez sélectionner un client pour définir l'adresse email.");
       return;
     }
     const subject = encodeURIComponent(`Facture ${invoiceNumber} - ${companyName}`);
     const body = encodeURIComponent(
-      `Bonjour ${resolvedClient.nom_contact},\n\nVeuillez trouver ci-joint la facture ${invoiceNumber} concernant le projet "${projectName}" d'un montant de ${formatCFA(totalAmount)}.\n\nCordialement,\n${signatureText}\n${companyName}`
+      `Bonjour ${clientContact},\n\nVeuillez trouver ci-joint la facture ${invoiceNumber} concernant le projet "${projectName}" d'un montant de ${formatCFA(totalAmount)}.\n\nCordialement,\n${companyName}`
     );
-    window.location.href = `mailto:${resolvedClient.email}?subject=${subject}&body=${body}`;
-    showToast("success", `Ouverture de votre messagerie pour ${resolvedClient.email}`);
+    window.location.assign(`mailto:${clientEmail}?subject=${subject}&body=${body}`);
+    showToast("success", `Ouverture de votre messagerie pour ${clientEmail}`);
   };
 
   // ==========================================
@@ -452,7 +632,7 @@ export default function FacturesPage() {
               <div className="bg-brand-bg border border-brand-light/30 rounded-2xl p-4 flex gap-3 text-brand-dark">
                 <Info size={18} className="shrink-0 mt-0.5" />
                 <div className="text-xs font-semibold leading-relaxed">
-                  Remplissez les détails à gauche. La facture à droite s'ajuste instantanément en temps réel !
+                  Remplissez les détails à gauche. La facture à droite s&apos;ajuste instantanément en temps réel !
                 </div>
               </div>
 
@@ -538,15 +718,31 @@ export default function FacturesPage() {
                       {formErrors.clientId && <span className="text-xs font-semibold text-danger-primary">{formErrors.clientId}</span>}
                     </div>
 
-                    {resolvedClient && (
-                      <div className="bg-brand-bg/50 border border-brand-light/20 rounded-2xl p-4 space-y-2 text-xs font-semibold">
-                        <span className="text-[10px] font-bold text-brand-primary uppercase block">Fiche client synchronisée</span>
-                        <div className="text-slate-800">🏢 {resolvedClient.nom_entreprise}</div>
-                        <div className="text-slate-500">👤 Contact : {resolvedClient.nom_contact}</div>
-                        <div className="text-slate-500">✉️ Email : {resolvedClient.email}</div>
-                        <div className="text-slate-500">📍 Adresse : {resolvedClient.adresse}</div>
+                    <div className="space-y-4 border-t border-slate-200 pt-4 mt-2">
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Détails du destinataire</span>
+                      <Input
+                        label="Nom de l'entreprise"
+                        value={clientName}
+                        onChange={(e) => setClientName(e.target.value)}
+                      />
+                      <Input
+                        label="Nom du contact"
+                        value={clientContact}
+                        onChange={(e) => setClientContact(e.target.value)}
+                      />
+                      <div className="grid grid-cols-2 gap-4">
+                        <Input
+                          label="Adresse email"
+                          value={clientEmail}
+                          onChange={(e) => setClientEmail(e.target.value)}
+                        />
+                        <Input
+                          label="Adresse postale"
+                          value={clientAddress}
+                          onChange={(e) => setClientAddress(e.target.value)}
+                        />
                       </div>
-                    )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -595,14 +791,24 @@ export default function FacturesPage() {
                         </Button>
                       </div>
 
-                      {lineItems.map((item, idx) => (
-                        <div key={item.id} className="bg-white border border-slate-200 rounded-xl p-3.5 space-y-3 relative">
-                          <button 
-                            onClick={() => removeLineItem(item.id)}
-                            className="absolute top-3 right-3 text-slate-400 hover:text-danger-primary transition-colors"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                      {lineItems.length === 0 && (
+                        <div className="text-center py-6 border border-dashed border-slate-200 bg-white rounded-xl text-slate-400 text-xs font-semibold">
+                          Aucun service défini. Veuillez cliquer sur &quot;Ajouter un service&quot;.
+                        </div>
+                      )}
+                      {lineItems.map((item) => (
+                        <div key={item.id} className="bg-white border border-slate-200 rounded-2xl p-4 space-y-3 relative shadow-sm">
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Service / Prestation</span>
+                            <button 
+                              type="button"
+                              onClick={() => removeLineItem(item.id)}
+                              className="p-2 bg-red-50 hover:bg-red-100 text-red-650 rounded-xl transition-all border border-red-100/50 hover:border-red-200 flex items-center justify-center cursor-pointer shadow-xs animate-in fade-in duration-205"
+                              title="Supprimer ce service"
+                            >
+                              <Trash2 size={14} className="stroke-[2.5]" />
+                            </button>
+                          </div>
                           
                           <Input 
                             placeholder="Description du service"
@@ -634,79 +840,7 @@ export default function FacturesPage() {
                 )}
               </div>
 
-              {/* SECTION 4 : MOYEN DE PAIEMENT */}
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm transition-all">
-                <button 
-                  onClick={() => toggleSection("paymentDetails")}
-                  className="w-full px-5 py-4 flex items-center justify-between font-bold text-sm text-slate-800 hover:bg-slate-50 transition-all"
-                >
-                  <span>4. Détails du Virement</span>
-                  <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${expandedSection === "paymentDetails" ? "rotate-180" : ""}`} />
-                </button>
-                {expandedSection === "paymentDetails" && (
-                  <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <Input 
-                      label="Méthode de Paiement"
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                    />
-                    <Input 
-                      label="Titulaire du Compte"
-                      value={bankAccountName}
-                      onChange={(e) => setBankAccountName(e.target.value)}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input 
-                        label="Code Banque / Guichet"
-                        value={bankCode}
-                        onChange={(e) => setBankCode(e.target.value)}
-                      />
-                      <Input 
-                        label="Numéro de Compte"
-                        value={bankAccountNumber}
-                        onChange={(e) => setBankAccountNumber(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* SECTION 5 : NOTES & SIGNATURE */}
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm transition-all">
-                <button 
-                  onClick={() => toggleSection("notesSignature")}
-                  className="w-full px-5 py-4 flex items-center justify-between font-bold text-sm text-slate-800 hover:bg-slate-50 transition-all"
-                >
-                  <span>5. Notes & Conditions</span>
-                  <ChevronDown size={16} className={`text-slate-400 transition-transform duration-200 ${expandedSection === "notesSignature" ? "rotate-180" : ""}`} />
-                </button>
-                {expandedSection === "notesSignature" && (
-                  <div className="p-5 border-t border-slate-100 bg-slate-50/50 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="flex flex-col gap-1.5 w-full">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Conditions de facturation</label>
-                      <textarea
-                        value={invoiceNotes}
-                        onChange={(e) => setInvoiceNotes(e.target.value)}
-                        rows={3}
-                        className="w-full py-2.5 px-4 rounded-2xl text-sm bg-white border border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-primary/25 transition-all resize-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <Input 
-                        label="Signataire"
-                        value={signatureText}
-                        onChange={(e) => setSignatureText(e.target.value)}
-                      />
-                      <Input 
-                        label="Qualité / Fonction"
-                        value={signatureNote}
-                        onChange={(e) => setSignatureNote(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Sections 4 et 5 supprimées */}
 
             </div>
 
@@ -748,133 +882,110 @@ export default function FacturesPage() {
               </div>
 
               {/* FEUILLE D'APERCU PREMIUM - EFFET PAPIER IMPRIMABLE */}
-              <div className="printable-sheet bg-white rounded-3xl border border-slate-100 p-8 sm:p-10 shadow-[0_8px_30px_rgba(0,0,0,0.03)] space-y-8 text-slate-800 transition-all font-sans">
+              <div className="printable-sheet bg-white p-8 sm:p-10 space-y-8 text-black transition-all font-sans">
                 
-                {/* En-tête : Numéro et Logo */}
                 <div className="flex justify-between items-start">
-                  <div>
-                    <h2 className="text-2xl font-black text-slate-900 tracking-tight">Facture</h2>
-                    <span className="text-xs font-bold text-slate-400 block mt-0.5">{invoiceNumber}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-xl font-black text-brand-primary tracking-tighter">{companyName}</span>
-                    <span className="text-[10px] text-slate-400 font-semibold block">{companyWebsite}</span>
-                  </div>
-                </div>
-
-                {/* Métadonnées du Projet */}
-                <div className="grid grid-cols-3 gap-4 border-y border-slate-100 py-4 text-xs font-bold">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Projet</span>
-                    <span className="text-slate-800 block mt-1">{projectName || "—"}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Émission</span>
-                    <span className="text-slate-800 block mt-1">{issuedDate ? new Date(issuedDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—"}</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Échéance</span>
-                    <span className="text-slate-800 block mt-1">{dueDate ? new Date(dueDate).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" }) : "—"}</span>
-                  </div>
-                </div>
-
-                {/* De / Pour Coordonnées */}
-                <div className="grid grid-cols-2 gap-8 text-xs">
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">De</span>
-                    <span className="font-bold text-slate-800 block">{companyName}</span>
-                    <span className="text-slate-500 block leading-relaxed">{companyAddress}</span>
-                    <span className="text-slate-400 font-semibold block">{companyPhone}</span>
-                    <span className="text-slate-400 font-semibold block">{companyEmail}</span>
-                  </div>
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pour</span>
-                    {resolvedClient ? (
-                      <>
-                        <span className="font-bold text-slate-800 block">{resolvedClient.nom_entreprise}</span>
-                        <span className="text-slate-500 block leading-relaxed">{resolvedClient.adresse}</span>
-                        <span className="text-slate-400 font-semibold block">Contact : {resolvedClient.nom_contact}</span>
-                        <span className="text-slate-400 font-semibold block">{resolvedClient.email}</span>
-                      </>
+                  <div className="flex items-center gap-4">
+                    {logoAgence ? (
+                      <div className="w-28 h-28 flex items-center justify-center select-none shrink-0 bg-white p-2 overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={logoAgence} alt="Logo" className="max-w-full max-h-full object-contain" />
+                      </div>
                     ) : (
-                      <span className="text-slate-400 font-semibold italic block">Aucun client sélectionné</span>
+                      <div className="w-28 h-28 bg-[#1A1A1A] flex items-center justify-center p-3 select-none shrink-0 rounded-none">
+                        <div className="flex items-center gap-2">
+                          {/* Icon */}
+                          <div className="w-8 h-8 shrink-0">
+                            <svg className="w-full h-full text-white" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                              <path d="M12 30L20 10H25L17 30H12Z" fill="currentColor" />
+                              <path d="M19 30L27 10H32L24 30H19Z" fill="currentColor" opacity="0.9" />
+                              <path d="M26 30L30 20H35L31 30H26Z" fill="currentColor" opacity="0.8" />
+                            </svg>
+                          </div>
+                          {/* Text */}
+                          <div className="flex flex-col text-white">
+                            <span className="font-extrabold text-sm tracking-wider leading-none">WEBIXO</span>
+                            <span className="font-bold text-[8px] tracking-widest mt-1 opacity-70 leading-none">AGENCY</span>
+                          </div>
+                        </div>
+                      </div>
                     )}
                   </div>
+                  <div className="text-right">
+                    <h2 className="text-xl font-bold tracking-tight text-black font-sans">
+                      FACTURE - {invoiceNumber.replace("FC-", "")}
+                    </h2>
+                    <div className="text-xs text-black mt-2 font-medium">Date de facturation: {formatDateWithDots(issuedDate)}</div>
+                    <div className="text-xs text-black mt-1 font-medium">Échéance: {formatDateWithDots(dueDate)}</div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8 text-xs font-sans mt-8">
+                  <div className="space-y-1">
+                    <span className="font-bold text-black text-sm block">{companyName}</span>
+                    <span className="text-black block leading-relaxed">{companyAddress}</span>
+                    <span className="text-black font-semibold block">{companyWebsite}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="font-bold text-black uppercase tracking-wider block">{clientName || "CLIENT"}</span>
+                    {clientAddress && <span className="text-black block leading-relaxed">{clientAddress}</span>}
+                    {clientContact && <span className="text-black font-medium block">Contact : {clientContact}</span>}
+                    {clientEmail && <span className="text-black font-medium block">{clientEmail}</span>}
+                  </div>
+                </div>
+
+                <div className="text-xs text-black font-sans leading-relaxed mt-6">
+                  Voici la facture du projet : <strong className="text-black font-bold">{projectName || "—"}</strong>
                 </div>
 
                 {/* Tableau des prestations */}
                 <div className="space-y-4">
-                  <table className="w-full text-xs text-left">
+                  <table className="w-full text-xs text-left font-sans mt-4 border-collapse border-b border-black">
                     <thead>
-                      <tr className="border-b border-slate-200 text-slate-400 uppercase tracking-wider text-[9px] font-bold">
-                        <th className="py-2.5 font-bold">Service / Prestation</th>
-                        <th className="py-2.5 text-center font-bold">Qté</th>
-                        <th className="py-2.5 text-right font-bold">Prix Unit.</th>
-                        <th className="py-2.5 text-right font-bold">Montant</th>
+                      <tr className="bg-slate-100 text-black text-xs font-semibold border-b border-black">
+                        <th className="py-2 px-3 font-semibold">Description</th>
+                        <th className="py-2.5 px-3 text-center font-semibold">Date</th>
+                        <th className="py-2.5 px-3 text-center font-semibold">Qté</th>
+                        <th className="py-2.5 px-3 text-center font-semibold">Unité</th>
+                        <th className="py-2.5 px-3 text-right font-semibold">Prix unitaire</th>
+                        <th className="py-2.5 px-3 text-right font-semibold">Montant</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="font-semibold text-black">
                       {lineItems.map((item) => (
-                        <tr key={item.id} className="border-b border-slate-100 text-slate-800 font-semibold">
-                          <td className="py-3 font-semibold">{item.description}</td>
-                          <td className="py-3 text-center">{item.units}</td>
-                          <td className="py-3 text-right">{formatCFA(item.price)}</td>
-                          <td className="py-3 text-right font-bold text-slate-900">{formatCFA(item.price * item.units)}</td>
+                        <tr key={item.id} className="text-black">
+                          <td className="py-2.5 px-3 font-medium">{item.description}</td>
+                          <td className="py-2.5 px-3 text-center text-black font-medium">
+                            {formatDateWithDots(issuedDate)}
+                          </td>
+                          <td className="py-2.5 px-3 text-center text-black font-medium">
+                            {item.units.toFixed(2).replace(".", ",")}
+                          </td>
+                          <td className="py-2.5 px-3 text-center text-black font-medium">h</td>
+                          <td className="py-2.5 px-3 text-right font-medium">{formatNumberWithSpaces(item.price)}<span className="ml-1">FCFA</span></td>
+                          <td className="py-2.5 px-3 text-right font-bold text-black">{formatNumberWithSpaces(item.price * item.units)}<span className="ml-1">FCFA</span></td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
 
-                  {/* Totaux */}
-                  <div className="flex justify-end pt-2 text-xs">
-                    <div className="w-64 space-y-2.5 font-bold">
-                      <div className="flex justify-between text-slate-500 font-semibold">
-                        <span>Sous-total</span>
-                        <span>{formatCFA(subtotal)}</span>
+                  <div className="flex justify-end pt-4 font-sans">
+                    <div className="w-64 text-xs space-y-2 font-semibold">
+                      <div className="flex justify-between text-black font-semibold pb-1.5">
+                        <span>Total HT</span>
+                        <span className="text-black font-bold">{formatNumberWithSpaces(subtotal)}<span className="ml-1">FCFA</span></span>
                       </div>
-                      <div className="flex justify-between text-slate-500 font-semibold">
-                        <span>TVA (18%)</span>
-                        <span>{formatCFA(tvaAmount)}</span>
-                      </div>
-                      <div className="flex justify-between text-slate-900 border-t border-slate-200 pt-2 text-sm font-black">
-                        <span>Montant Total</span>
-                        <span className="text-brand-primary">{formatCFA(totalAmount)}</span>
+                      <div className="flex justify-between text-black pt-2 text-sm font-bold border-t border-black">
+                        <span>Total TTC</span>
+                        <span className="text-black text-sm font-extrabold">{formatNumberWithSpaces(totalAmount)}<span className="ml-1">FCFA</span></span>
                       </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* Bloc d'informations Virement */}
-                <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4 text-[10px] space-y-1.5">
-                  <span className="text-[9px] font-bold text-slate-400 uppercase block">Coordonnées bancaires pour le paiement</span>
-                  <div className="text-slate-700 font-semibold">Moyen : {paymentMethod}</div>
-                  <div className="text-slate-500">Titulaire : {bankAccountName}</div>
-                  <div className="text-slate-500">Banque : {bankCode}</div>
-                  <div className="text-slate-500">Compte : {bankAccountNumber}</div>
-                </div>
-
-                {/* Conditions / Notes */}
-                {invoiceNotes && (
-                  <div className="text-[10px] text-slate-400 font-semibold leading-relaxed border-l-2 border-slate-200 pl-3">
-                    {invoiceNotes}
-                  </div>
-                )}
-
-                {/* Bloc Signature */}
-                <div className="flex justify-end pt-4">
-                  <div className="text-center w-48 space-y-1">
-                    <span className="text-[20px] font-cursive font-medium text-brand-primary select-none block tracking-tighter" style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic' }}>
-                      {signatureText}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-800 block border-t border-slate-200 pt-1">{signatureText}</span>
-                    <span className="text-[8px] font-semibold text-slate-400 uppercase tracking-wider block">{signatureNote}</span>
                   </div>
                 </div>
 
               </div>
 
             </div>
-
           </div>
         </div>
       ) : (
@@ -900,7 +1011,7 @@ export default function FacturesPage() {
           {/* KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <Card>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-sans">Chiffre d'Affaires</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1 font-sans">Chiffre d&apos;Affaires</span>
               <span className="text-xl sm:text-2xl font-black text-slate-900 font-sans">{formatCFA(statsFactures.total)}</span>
             </Card>
             <Card>
@@ -968,7 +1079,7 @@ export default function FacturesPage() {
                   <TableRow>
                     <TableHeadCell>Client</TableHeadCell>
                     <TableHeadCell>Service</TableHeadCell>
-                    <TableHeadCell>Date d'émission</TableHeadCell>
+                    <TableHeadCell>Date d&apos;émission</TableHeadCell>
                     <TableHeadCell>Montant</TableHeadCell>
                     <TableHeadCell>Statut</TableHeadCell>
                     <TableHeadCell className="text-right">Actions</TableHeadCell>

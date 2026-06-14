@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { Database } from "@/types/database.types";
 
 // ==========================================
 // 1. INTERFACES DU MODÈLE RELATIONNEL DRY
@@ -89,7 +90,7 @@ const parseFrenchDateToISO = (dateStr: string) => {
 // ==========================================
 
 export function useAppState() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [clients, setClients] = useState<Client[]>([]);
   const [factures, setFactures] = useState<Facture[]>([]);
@@ -126,7 +127,7 @@ export function useAppState() {
 
         // Map database records to camelCase and format dates
         setClients(
-          (clientsData || []).map((c: any) => ({
+          (clientsData || []).map((c: Database["public"]["Tables"]["Client"]["Row"]) => ({
             id: c.id,
             nom_entreprise: c.nom_entreprise,
             nom_contact: c.nom_contact || "",
@@ -139,12 +140,12 @@ export function useAppState() {
         );
 
         setFactures(
-          (facturesData || []).map((f: any) => ({
+          (facturesData || []).map((f: Database["public"]["Tables"]["Facture"]["Row"]) => ({
             id: f.id,
             client_id: f.client_id,
             service: f.service,
             montant: Number(f.montant),
-            statut_paiement: f.statut_paiement as any,
+            statut_paiement: f.statut_paiement as Facture["statut_paiement"],
             date_emission: formatToFrenchDate(f.date_emission),
             heure_emission: f.heure_emission.substring(0, 5),
             jours_retard: f.jours_retard || undefined,
@@ -152,12 +153,12 @@ export function useAppState() {
         );
 
         setDevis(
-          (devisData || []).map((d: any) => ({
+          (devisData || []).map((d: Database["public"]["Tables"]["Devis"]["Row"]) => ({
             id: d.id,
             client_id: d.client_id,
             service: d.service,
             montant: Number(d.montant),
-            statut: d.statut as any,
+            statut: d.statut as Devis["statut"],
             date_emission: formatToFrenchDate(d.date_emission),
             date_validite: formatToFrenchDate(d.date_validite),
           }))
@@ -170,7 +171,7 @@ export function useAppState() {
     }
 
     loadData();
-  }, []);
+  }, [supabase]);
 
   // Actions Clients
   const addClient = async (client: Omit<Client, "id" | "avatarBg" | "avatarText" | "initials">) => {
@@ -241,7 +242,7 @@ export function useAppState() {
           .toUpperCase() || "??";
       }
 
-      const updatePayload: any = {
+      const updatePayload: Database["public"]["Tables"]["Client"]["Update"] = {
         nom_entreprise: updatedFields.nom_entreprise,
         nom_contact: updatedFields.nom_contact,
         email: updatedFields.email,
@@ -307,7 +308,7 @@ export function useAppState() {
         client_id: data.client_id,
         service: data.service,
         montant: Number(data.montant),
-        statut_paiement: data.statut_paiement as any,
+        statut_paiement: data.statut_paiement as Facture["statut_paiement"],
         date_emission: formatToFrenchDate(data.date_emission),
         heure_emission: data.heure_emission.substring(0, 5),
         jours_retard: data.jours_retard || undefined,
@@ -340,7 +341,7 @@ export function useAppState() {
           f.id === id
             ? {
                 ...f,
-                statut_paiement: data.statut_paiement as any,
+                statut_paiement: data.statut_paiement as Facture["statut_paiement"],
                 jours_retard: data.jours_retard || undefined,
               }
             : f
@@ -379,7 +380,7 @@ export function useAppState() {
         client_id: data.client_id,
         service: data.service,
         montant: Number(data.montant),
-        statut: data.statut as any,
+        statut: data.statut as Devis["statut"],
         date_emission: formatToFrenchDate(data.date_emission),
         date_validite: formatToFrenchDate(data.date_validite),
       };
@@ -408,7 +409,7 @@ export function useAppState() {
           d.id === id
             ? {
                 ...d,
-                statut: data.statut as any,
+                statut: data.statut as Devis["statut"],
               }
             : d
         )

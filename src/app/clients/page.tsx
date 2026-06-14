@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { Plus, Search, User, Mail, MapPin, X, RefreshCw } from "lucide-react";
 import { useAppState, Client } from "@/hooks/useAppState";
 import { Button } from "@/components/ui/Button";
-import { Card, CardHeader, CardBody } from "@/components/ui/Card";
+import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { 
@@ -151,7 +151,7 @@ export default function ClientsPage() {
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Gestion des clients</h1>
-          <p className="text-sm text-slate-400 font-semibold">Répertoire et suivi de l'activité commerciale</p>
+          <p className="text-sm text-slate-400 font-semibold">Répertoire et suivi de l&apos;activité commerciale</p>
         </div>
         <Button 
           variant="primary" 

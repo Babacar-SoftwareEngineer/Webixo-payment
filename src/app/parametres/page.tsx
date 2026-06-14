@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Building2, 
   Bell, 
@@ -10,7 +10,7 @@ import {
   Mail, 
   Phone,
   Lock,
-  RefreshCw
+  Globe
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader, CardBody } from "@/components/ui/Card";
@@ -27,6 +27,30 @@ export default function ParametresPage() {
   const [telAgence, setTelAgence] = useState("+221 33 800 00 00");
   const [emailAgence, setEmailAgence] = useState("contact@webixo.sn");
   const [adresseAgence, setAdresseAgence] = useState("Rue des Almadies, Dakar, Sénégal");
+  const [websiteAgence, setWebsiteAgence] = useState("webixo-agency.com");
+  const [logoAgence, setLogoAgence] = useState("");
+
+  // Charger les paramètres depuis localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("webixo_agency_settings");
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setTimeout(() => {
+            if (parsed.nomAgence) setNomAgence(parsed.nomAgence);
+            if (parsed.telAgence) setTelAgence(parsed.telAgence);
+            if (parsed.emailAgence) setEmailAgence(parsed.emailAgence);
+            if (parsed.adresseAgence) setAdresseAgence(parsed.adresseAgence);
+            if (parsed.websiteAgence) setWebsiteAgence(parsed.websiteAgence);
+            if (parsed.logoAgence) setLogoAgence(parsed.logoAgence);
+          }, 0);
+        } catch (e) {
+          console.error("Erreur lors de la lecture des paramètres :", e);
+        }
+      }
+    }
+  }, []);
 
   // Notifications
   const [smsRelance, setSmsRelance] = useState(true);
@@ -43,12 +67,22 @@ export default function ParametresPage() {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simuler l'enregistrement asynchrone (1.5 secondes)
+    const settings = {
+      nomAgence,
+      telAgence,
+      emailAgence,
+      adresseAgence,
+      websiteAgence,
+      logoAgence
+    };
+
+    localStorage.setItem("webixo_agency_settings", JSON.stringify(settings));
+
     setTimeout(() => {
       setIsLoading(false);
       setShowSuccessToast(true);
       setTimeout(() => setShowSuccessToast(false), 3000);
-    }, 1500);
+    }, 1000);
   };
 
   return (
@@ -64,8 +98,8 @@ export default function ParametresPage() {
       {/* En-tête */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Paramètres de l'agence</h1>
-          <p className="text-sm text-slate-400 font-semibold">Configurez l'identité et les services de facturation de votre agence</p>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Paramètres de l&apos;agence</h1>
+          <p className="text-sm text-slate-400 font-semibold">Configurez l&apos;identité et les services de facturation de votre agence</p>
         </div>
       </header>
 
@@ -138,11 +172,19 @@ export default function ParametresPage() {
                     leftIcon={<Mail size={14} />}
                   />
 
-                  <Input 
-                    label="Adresse du Siège Social" 
-                    value={adresseAgence} 
-                    onChange={(e) => setAdresseAgence(e.target.value)} 
-                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input 
+                      label="Adresse du Siège Social" 
+                      value={adresseAgence} 
+                      onChange={(e) => setAdresseAgence(e.target.value)} 
+                    />
+                    <Input 
+                      label="Site Internet" 
+                      value={websiteAgence} 
+                      onChange={(e) => setWebsiteAgence(e.target.value)} 
+                      leftIcon={<Globe size={14} />}
+                    />
+                  </div>
                 </CardBody>
               </Card>
             </div>
@@ -151,11 +193,42 @@ export default function ParametresPage() {
               <Card>
                 <CardHeader title="Logo & Identité" description="Visualiser votre logo de marque." />
                 <CardBody className="flex flex-col items-center py-6">
-                  <div className="w-24 h-24 rounded-3xl bg-brand-bg border border-brand-light/20 flex items-center justify-center text-brand-primary mb-4 shadow-sm select-none">
-                    <Building2 size={36} className="stroke-[2]" />
+                  <div className="w-24 h-24 rounded-3xl bg-brand-bg border border-brand-light/20 flex items-center justify-center text-brand-primary mb-4 shadow-sm select-none overflow-hidden relative group">
+                    {logoAgence ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={logoAgence} alt="Logo Agence" className="w-full h-full object-contain p-2" />
+                    ) : (
+                      <Building2 size={36} className="stroke-[2]" />
+                    )}
                   </div>
-                  <span className="text-xs font-bold text-slate-800">Logo Agence</span>
-                  <span className="text-[10px] text-slate-400 font-semibold mt-0.5">Format recommandé : PNG, SVG (250x250px)</span>
+                  <label className="cursor-pointer bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold py-2.5 px-4 rounded-xl transition-all inline-block text-center shadow-sm hover:shadow">
+                    Choisir un logo
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            setLogoAgence(reader.result as string);
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }} 
+                    />
+                  </label>
+                  {logoAgence && (
+                    <button 
+                      type="button"
+                      onClick={() => setLogoAgence("")}
+                      className="text-danger-primary text-[10px] font-bold mt-2 hover:underline cursor-pointer border-none bg-transparent"
+                    >
+                      Supprimer le logo
+                    </button>
+                  )}
+                  <span className="text-[10px] text-slate-400 font-semibold mt-3 text-center">Format recommandé : PNG, SVG (250x250px)</span>
                 </CardBody>
               </Card>
             </div>
@@ -171,7 +244,7 @@ export default function ParametresPage() {
                 <div className="flex items-center justify-between pb-4 border-b border-slate-50">
                   <div>
                     <span className="text-sm font-bold text-slate-800 block">Relancer par SMS en cas de retard</span>
-                    <span className="text-xs text-slate-400 font-medium mt-0.5">Envoi automatique d'un texto à échéance + 2 jours.</span>
+                    <span className="text-xs text-slate-400 font-medium mt-0.5">Envoi automatique d&apos;un texto à échéance + 2 jours.</span>
                   </div>
                   
                   {/* Toggle Switch */}
@@ -209,7 +282,7 @@ export default function ParametresPage() {
               <CardBody className="space-y-6">
                 <div className="flex items-center justify-between pb-4 border-b border-slate-50">
                   <div>
-                    <span className="text-sm font-bold text-slate-800 block">Activer les rappels d'échéance par Email</span>
+                    <span className="text-sm font-bold text-slate-800 block">Activer les rappels d&apos;échéance par Email</span>
                     <span className="text-xs text-slate-400 font-medium mt-0.5">Envoyer un récapitulatif par courriel.</span>
                   </div>
                   
@@ -230,7 +303,7 @@ export default function ParametresPage() {
 
                 {emailRelance && (
                   <div className="space-y-2 animate-in fade-in duration-200">
-                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Gabarit de l'Email de Relance</label>
+                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">Gabarit de l&apos;Email de Relance</label>
                     <textarea
                       value={gabaritEmail}
                       onChange={(e) => setGabaritEmail(e.target.value)}

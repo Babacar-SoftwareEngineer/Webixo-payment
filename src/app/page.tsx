@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { 
   Search, 
   RefreshCw, 
@@ -80,7 +80,7 @@ const getLast12Months = () => {
 // ==========================================
 
 export default function Dashboard() {
-  const { clients, factures, devis, isLoaded } = useAppState();
+  const { clients, factures, isLoaded } = useAppState();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string>("Tous");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);

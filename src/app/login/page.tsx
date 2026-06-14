@@ -61,9 +61,10 @@ export default function LoginPage() {
         router.push("/");
         router.refresh();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Auth error:", err);
-      setErrorMsg(err.message || "Une erreur inattendue est survenue.");
+      const message = err instanceof Error ? err.message : "Une erreur inattendue est survenue.";
+      setErrorMsg(message);
     } finally {
       setLoading(false);
     }

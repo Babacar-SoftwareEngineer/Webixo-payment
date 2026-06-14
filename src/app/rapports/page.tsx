@@ -127,7 +127,7 @@ export default function RapportsPage() {
       {/* En-tête */}
       <header>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Rapports Financiers</h1>
-        <p className="text-sm text-slate-400 font-semibold">Analyses détaillées de la performance de l'agence</p>
+        <p className="text-sm text-slate-400 font-semibold">Analyses détaillées de la performance de l&apos;agence</p>
       </header>
 
       {/* KPI Section */}

@@ -117,7 +117,7 @@ export default function Sidebar({ onClose }: SidebarProps) {
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all"
         >
           <HelpCircle size={18} className="text-slate-400" />
-          <span>Centre d'aide</span>
+          <span>Centre d&apos;aide</span>
         </Link>
         <button 
           onClick={() => {
