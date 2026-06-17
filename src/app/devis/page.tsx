@@ -861,113 +861,115 @@ export default function DevisPage() {
               </div>
 
               {/* SHEET APERCU */}
-              <div className="printable-sheet bg-white p-8 sm:p-10 space-y-8 text-black transition-all font-sans">
-                
-                <div className="flex justify-between items-start">
-                   <div className="flex items-center gap-4">
-                    {logoAgence ? (
-                      <div className="w-28 h-28 flex items-center justify-center select-none shrink-0 bg-white p-2 overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={logoAgence} alt="Logo" className="max-w-full max-h-full object-contain" />
-                      </div>
-                    ) : (
-                      <div className="w-28 h-28 bg-[#1A1A1A] flex items-center justify-center p-3 select-none shrink-0 rounded-none">
-                        <div className="flex items-center gap-2">
-                          {/* Icon */}
-                          <div className="w-8 h-8 shrink-0">
-                            <svg className="w-full h-full text-white" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-                              <path d="M12 30L20 10H25L17 30H12Z" fill="currentColor" />
-                              <path d="M19 30L27 10H32L24 30H19Z" fill="currentColor" opacity="0.9" />
-                              <path d="M26 30L30 20H35L31 30H26Z" fill="currentColor" opacity="0.8" />
-                            </svg>
-                          </div>
-                          {/* Text */}
-                          <div className="flex flex-col text-white">
-                            <span className="font-extrabold text-sm tracking-wider leading-none">WEBIXO</span>
-                            <span className="font-bold text-[8px] tracking-widest mt-1 opacity-70 leading-none">AGENCY</span>
+              <div className="w-full overflow-x-auto pb-4 scrollbar-thin">
+                <div className="printable-sheet min-w-[750px] lg:min-w-0 bg-white p-8 sm:p-10 space-y-8 text-black transition-all font-sans shadow-sm">
+                  
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-4">
+                      {logoAgence ? (
+                        <div className="w-28 h-28 flex items-center justify-center select-none shrink-0 bg-white p-2 overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={logoAgence} alt="Logo" className="max-w-full max-h-full object-contain" />
+                        </div>
+                      ) : (
+                        <div className="w-28 h-28 bg-[#1A1A1A] flex items-center justify-center p-3 select-none shrink-0 rounded-none">
+                          <div className="flex items-center gap-2">
+                            {/* Icon */}
+                            <div className="w-8 h-8 shrink-0">
+                              <svg className="w-full h-full text-white" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 30L20 10H25L17 30H12Z" fill="currentColor" />
+                                <path d="M19 30L27 10H32L24 30H19Z" fill="currentColor" opacity="0.9" />
+                                <path d="M26 30L30 20H35L31 30H26Z" fill="currentColor" opacity="0.8" />
+                              </svg>
+                            </div>
+                            {/* Text */}
+                            <div className="flex flex-col text-white">
+                              <span className="font-extrabold text-sm tracking-wider leading-none">WEBIXO</span>
+                              <span className="font-bold text-[8px] tracking-widest mt-1 opacity-70 leading-none">AGENCY</span>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <h2 className="text-xl font-bold tracking-tight text-black font-sans">
+                        DEVIS - {quoteNumber.replace("DV-", "")}
+                      </h2>
+                      <div className="text-xs text-black mt-2 font-medium">Date d&apos;émission: {formatDateWithDots(issuedDate)}</div>
+                      <div className="text-xs text-black mt-1 font-medium">Limite de validité: {formatDateWithDots(validityDate)}</div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <h2 className="text-xl font-bold tracking-tight text-black font-sans">
-                      DEVIS - {quoteNumber.replace("DV-", "")}
-                    </h2>
-                    <div className="text-xs text-black mt-2 font-medium">Date d&apos;émission: {formatDateWithDots(issuedDate)}</div>
-                    <div className="text-xs text-black mt-1 font-medium">Limite de validité: {formatDateWithDots(validityDate)}</div>
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-2 gap-8 text-xs font-sans mt-8">
-                  <div className="space-y-1">
-                    <span className="font-bold text-black text-sm block">{companyName}</span>
-                    <span className="text-black block leading-relaxed">{companyAddress}</span>
-                    <span className="text-black font-semibold block">{companyWebsite}</span>
+                  <div className="grid grid-cols-2 gap-8 text-xs font-sans mt-8">
+                    <div className="space-y-1">
+                      <span className="font-bold text-black text-sm block">{companyName}</span>
+                      <span className="text-black block leading-relaxed">{companyAddress}</span>
+                      <span className="text-black font-semibold block">{companyWebsite}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="font-bold text-black uppercase tracking-wider block">{clientName || "CLIENT"}</span>
+                      {clientAddress && <span className="text-black block leading-relaxed">{clientAddress}</span>}
+                      {clientContact && <span className="text-black font-medium block">Contact : {clientContact}</span>}
+                      {clientEmail && <span className="text-black font-medium block">{clientEmail}</span>}
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <span className="font-bold text-black uppercase tracking-wider block">{clientName || "CLIENT"}</span>
-                    {clientAddress && <span className="text-black block leading-relaxed">{clientAddress}</span>}
-                    {clientContact && <span className="text-black font-medium block">Contact : {clientContact}</span>}
-                    {clientEmail && <span className="text-black font-medium block">{clientEmail}</span>}
+
+                  <div className="text-xs text-black font-sans leading-relaxed mt-6">
+                    Voici le devis du projet : <strong className="text-black font-bold">{projectName || "—"}</strong>
                   </div>
-                </div>
 
-                <div className="text-xs text-black font-sans leading-relaxed mt-6">
-                  Voici le devis du projet : <strong className="text-black font-bold">{projectName || "—"}</strong>
-                </div>
-
-                {/* Lots de travaux */}
-                <div className="space-y-4">
-                  <table className="w-full text-xs text-left font-sans mt-4 border-collapse border-b border-black">
-                    <thead>
-                      <tr className="bg-slate-100 text-black text-xs font-semibold border-b border-black">
-                        <th className="py-2 px-3 font-semibold">Description</th>
-                        <th className="py-2.5 px-3 text-center font-semibold">Date</th>
-                        <th className="py-2.5 px-3 text-center font-semibold">Qté</th>
-                        <th className="py-2.5 px-3 text-center font-semibold">Unité</th>
-                        <th className="py-2.5 px-3 text-right font-semibold">Prix unitaire</th>
-                        <th className="py-2.5 px-3 text-center font-semibold">TVA</th>
-                        <th className="py-2.5 px-3 text-right font-semibold">Montant</th>
-                      </tr>
-                    </thead>
-                    <tbody className="font-semibold text-black">
-                      {lineItems.map((item) => (
-                        <tr key={item.id} className="text-black">
-                          <td className="py-2.5 px-3 font-medium">{item.description}</td>
-                          <td className="py-2.5 px-3 text-center text-black font-medium">
-                            {formatDateWithDots(issuedDate)}
-                          </td>
-                          <td className="py-2.5 px-3 text-center font-medium">
-                            {item.units.toFixed(2).replace(".", ",")}
-                          </td>
-                          <td className="py-2.5 px-3 text-center text-black font-medium">h</td>
-                          <td className="py-2.5 px-3 text-right font-medium">{formatNumberWithSpaces(item.price)}<span className="ml-1">FCFA</span></td>
-                          <td className="py-2.5 px-3 text-center text-black font-medium">{(tvaRate * 100).toFixed(2).replace(".", ",")}%</td>
-                          <td className="py-2.5 px-3 text-right font-bold text-black">{formatNumberWithSpaces(item.price * item.units)}<span className="ml-1">FCFA</span></td>
+                  {/* Lots de travaux */}
+                  <div className="space-y-4">
+                    <table className="w-full text-xs text-left font-sans mt-4 border-collapse border-b border-black">
+                      <thead>
+                        <tr className="bg-slate-100 text-black text-xs font-semibold border-b border-black">
+                          <th className="py-2 px-3 font-semibold">Description</th>
+                          <th className="py-2.5 px-3 text-center font-semibold">Date</th>
+                          <th className="py-2.5 px-3 text-center font-semibold">Qté</th>
+                          <th className="py-2.5 px-3 text-center font-semibold">Unité</th>
+                          <th className="py-2.5 px-3 text-right font-semibold">Prix unitaire</th>
+                          <th className="py-2.5 px-3 text-center font-semibold">TVA</th>
+                          <th className="py-2.5 px-3 text-right font-semibold">Montant</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="font-semibold text-black">
+                        {lineItems.map((item) => (
+                          <tr key={item.id} className="text-black">
+                            <td className="py-2.5 px-3 font-medium">{item.description}</td>
+                            <td className="py-2.5 px-3 text-center text-black font-medium">
+                              {formatDateWithDots(issuedDate)}
+                            </td>
+                            <td className="py-2.5 px-3 text-center font-medium">
+                              {item.units.toFixed(2).replace(".", ",")}
+                            </td>
+                            <td className="py-2.5 px-3 text-center text-black font-medium">h</td>
+                            <td className="py-2.5 px-3 text-right font-medium">{formatNumberWithSpaces(item.price)}<span className="ml-1">FCFA</span></td>
+                            <td className="py-2.5 px-3 text-center text-black font-medium">{(tvaRate * 100).toFixed(2).replace(".", ",")}%</td>
+                            <td className="py-2.5 px-3 text-right font-bold text-black">{formatNumberWithSpaces(item.price * item.units)}<span className="ml-1">FCFA</span></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
 
-                  <div className="flex justify-end pt-4 font-sans">
-                    <div className="w-64 text-xs space-y-2 font-semibold">
-                      <div className="flex justify-between text-black font-semibold pb-1.5">
-                        <span>Total HT</span>
-                        <span className="text-black font-bold">{formatNumberWithSpaces(subtotal)}<span className="ml-1">FCFA</span></span>
-                      </div>
-                      <div className="flex justify-between text-black font-semibold pb-1.5">
-                        <span>TVA {(tvaRate * 100).toFixed(2).replace(".", ",")}%</span>
-                        <span className="text-black font-bold">{formatNumberWithSpaces(tvaAmount)}<span className="ml-1">FCFA</span></span>
-                      </div>
-                      <div className="flex justify-between text-black pt-2 text-sm font-bold border-t border-black">
-                        <span>Total TTC</span>
-                        <span className="text-black text-sm font-extrabold">{formatNumberWithSpaces(totalAmount)}<span className="ml-1">FCFA</span></span>
+                    <div className="flex justify-end pt-4 font-sans">
+                      <div className="w-64 text-xs space-y-2 font-semibold">
+                        <div className="flex justify-between text-black font-semibold pb-1.5">
+                          <span>Total HT</span>
+                          <span className="text-black font-bold">{formatNumberWithSpaces(subtotal)}<span className="ml-1">FCFA</span></span>
+                        </div>
+                        <div className="flex justify-between text-black font-semibold pb-1.5">
+                          <span>TVA {(tvaRate * 100).toFixed(2).replace(".", ",")}%</span>
+                          <span className="text-black font-bold">{formatNumberWithSpaces(tvaAmount)}<span className="ml-1">FCFA</span></span>
+                        </div>
+                        <div className="flex justify-between text-black pt-2 text-sm font-bold border-t border-black">
+                          <span>Total TTC</span>
+                          <span className="text-black text-sm font-extrabold">{formatNumberWithSpaces(totalAmount)}<span className="ml-1">FCFA</span></span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
+                </div>
               </div>
 
             </div>
